@@ -65,6 +65,7 @@ def get_post(id: int):
     post = find_post(id)
 
     if not post:
+        
         raise HTTPException(
             status_code=404,
             detail=f"Post with id {id} does not exist"
