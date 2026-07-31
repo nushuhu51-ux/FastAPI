@@ -1,11 +1,15 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from pydantic import BaseModel
+from .database import engine, get_db
+from sqlalchemy.orm import Session
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
+from . import models
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
 
 class Post(BaseModel):
     title: str
@@ -37,6 +41,10 @@ while True:
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
+@app.get("/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+    return {"status": "Success"}
 
 
 # Get all posts
