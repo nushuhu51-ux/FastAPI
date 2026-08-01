@@ -1,25 +1,29 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
 
 # PostgreSQL Database URL
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:sami2539E@localhost/fastAPI"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:sami2539E@localhost:5432/fastAPI"
 
-# Create the database engine
+
+# Create database engine
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-# Create a SessionLocal class
+
+# Create SessionLocal class
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine
 )
 
-# Base class for SQLAlchemy models
+
+# Base class for models
 Base = declarative_base()
 
 
-# Dependency to get a database session
+# Dependency to get database session
 def get_db():
     db = SessionLocal()
     try:
