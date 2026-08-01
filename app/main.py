@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-
+from typing import List, Optional
 from .database import engine, get_db
 from . import models, schemas
 
@@ -23,34 +23,30 @@ def root():
     return {"message": "Hello World"}
 
 
-# Test SQLAlchemy connection
-@app.get("/sqlalchemy")
-def test_posts(db: Session = Depends(get_db)):
-    posts = db.query(models.Post).all()
-    return {"status": "Success", "data": posts}
-
-
-# Get all posts
-@app.get("/posts")
+@app.get("/posts", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(get_db)):
+    # cursor.execute("""SELECT * FROM posts """)
+    # posts = cursor.fetchall()
+
     posts = db.query(models.Post).all()
-    return {"data": posts}
+
+    return posts
 
 
 # Create a post
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: schemas.Post, db: Session = Depends(get_db)):
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     new_post = models.Post(**post.dict())
 
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
 
-    return {"data": new_post}
+    return new_post
 
 
 # Get one post
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.Post)
 def get_post(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
 
@@ -60,7 +56,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
             detail=f"Post with id {id} was not found",
         )
 
-    return {"data": post}
+    return post
 
 
 # Delete a post
@@ -82,8 +78,8 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 # Update a post
-@app.put("/posts/{id}")
-def update_post(id: int, post: schemas.Post, db: Session = Depends(get_db)):
+@app.put("/posts/{id}", response_model=schemas.Post)
+def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     post_query = db.query(models.Post).filter(models.Post.id == id)
     existing_post = post_query.first()
 
@@ -98,4 +94,13 @@ def update_post(id: int, post: schemas.Post, db: Session = Depends(get_db)):
 
     updated_post = post_query.first()
 
-    return {"data": updated_post}
+    return updated_post
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    new_user = models.User(**user.dict())
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return new_user
