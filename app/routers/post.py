@@ -1,36 +1,19 @@
-from fastapi import FastAPI, Response, status, HTTPException, Depends
+from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
+from.. import models, schemas, utils
 from sqlalchemy.orm import Session
-from fastapi.params import Body
-from pydantic import BaseModel
-
-from random import randrange
-import psycopg2
-from psycopg2.extras import ReplicationCursor
-import time
-from sqlalchemy.sql.functions import mode
-
-from .database import engine, get_db
-from . import models, schemas, utils
-
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
+from ..database import get_db
+import app
 
 
-@app.get("/")
-def root():
-    return {"message": "Hello World"}
-
-
+router = APIRouter()
 # ---------------------- POSTS ----------------------
 
-@app.get("/posts", response_model=list[schemas.Post])
+@router.get("/posts", response_model=list[schemas.Post])
 def get_posts(db: Session = Depends(get_db)):
     return db.query(models.Post).all()
 
 
-@app.post(
+@router.post(
     "/posts",
     status_code=status.HTTP_201_CREATED,
     response_model=schemas.Post
@@ -48,7 +31,7 @@ def create_post(
     return new_post
 
 
-@app.get("/posts/{id}", response_model=schemas.Post)
+@router.get("/posts/{id}", response_model=schemas.Post)
 def get_post(
     id: int,
     db: Session = Depends(get_db)
@@ -64,7 +47,7 @@ def get_post(
     return post
 
 
-@app.delete(
+@router.delete(
     "/posts/{id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
@@ -88,7 +71,7 @@ def delete_post(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put(
+@router.put(
     "/posts/{id}",
     response_model=schemas.Post
 )
@@ -115,35 +98,17 @@ def update_post(
 
 # ---------------------- USERS ----------------------
 
-@app.post(
-    "/users",
-    status_code=status.HTTP_201_CREATED,
-    response_model=schemas.UserOut
-)
+@router.post("/users",status_code=status.HTTP_201_CREATED,response_model=schemas.UserOut)
 def create_user(
-    user: schemas.UserCreate,
-    db: Session = Depends(get_db)
-):
-    existing_user = (
-        db.query(models.User)
-        .filter(models.User.email == user.email)
-        .first()
-    )
+    user: schemas.UserCreate, db: Session = Depends(get_db)):
 
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-
-    # Convert Pydantic model to dictionary
-    user_data = user.model_dump()
-
-    # Hash the password
-    hashed_password = utils.hash()
+    # hashed password - user.password
+    hashed_password = utils.hash(user.password)
+    user.password = hashed_password
+  
 
     # Create SQLAlchemy model
-    new_user = models.User(**user_data)
+    new_user = models.User(**user.dict())
 
     db.add(new_user)
     db.commit()
@@ -151,16 +116,10 @@ def create_user(
 
     return new_user
 
-@app.get("/users/{id}", response_model=schemas.UserOut)
+@router.get("/users/{id}", response_model=schemas.UserOut)
 def get_user(
-    id: int,
-    db: Session = Depends(get_db)
-):
-    user = (
-        db.query(models.User)
-        .filter(models.User.id == id)
-        .first()
-    )
+    id: int, db: Session = Depends(get_db)):
+    user = (db.query(models.User).filter(models.User.id == id).first())
 
     if user is None:
         raise HTTPException(
